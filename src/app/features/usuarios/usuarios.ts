@@ -1,44 +1,32 @@
-import { Component, signal, computed } from "@angular/core";
-import type { User } from "../../shared/types";
-import { UsuariosApi } from "../../services/usuarios";
-import { UploadsApi } from "../../services/uploads";
-import { createResourceState } from "../../core/http-resource";
+import { Component, signal, computed, viewChild } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import type { User, Role } from '../../shared/types';
+import { UsuariosApi } from '../../services/usuarios';
+import { UploadsApi, type FileUploadProgress } from '../../services/uploads';
+import { createResourceState } from '../../core/http-resource';
+import { EditUserModalComponent } from '../../shared/edit-user-modal.component';
+import { forkJoin } from 'rxjs';
 
 @Component({
   standalone: true,
-  selector: "app-usuarios",
-  templateUrl: "./usuarios.html",
+  selector: 'app-usuarios',
+  imports: [CommonModule, EditUserModalComponent, ],
+  templateUrl: './usuarios.html',
 })
 export class UsuariosPage {
+  // Referencia al modal
+  editModal = viewChild<EditUserModalComponent>('editModal');
+
   // Parámetros de búsqueda
+  q = signal('');
   page = signal(1);
-  changingRole = signal<string | null>(null);
-  togglingStatus = signal<string | null>(null);
-  terminoBusqueda = signal("");
+  role = signal<string>('');
+
   // Estado del listado de usuarios
-  private usersResource = createResourceState<{
-    ok: boolean;
-    items: User[];
-    total: number;
-    pages: number;
-  }>();
+  private usersResource = createResourceState<{ ok: boolean; items: User[]; total: number; pages: number }>();
 
   usersState = this.usersResource.state;
-  usuarios = computed(() => {
-    let filteredUsers = this.usersState().data?.items ?? [];
-    const query = this.terminoBusqueda().trim();
-
-    if (query) {
-      const normalizedQuery = this.normalizeString(query);
-      filteredUsers = filteredUsers.filter(
-        (user) =>
-          this.normalizeString(user.nombre).includes(normalizedQuery) ||
-          this.normalizeString(user.email).includes(normalizedQuery)
-      );
-    }
-
-    return filteredUsers;
-  });
+  usuarios = computed(() => this.usersState().data?.items ?? []);
   loading = computed(() => this.usersState().loading);
   error = computed(() => this.usersState().error);
   totalPages = computed(() => this.usersState().data?.pages ?? 1);
@@ -46,141 +34,220 @@ export class UsuariosPage {
   // Estado de subida de archivos
   selected = signal<User | null>(null);
   files = signal<File[]>([]);
-  uploading = signal(false);
-  resultMsg = signal("");
 
-  constructor(private usersApi: UsuariosApi, private uploadApi: UploadsApi) {
+  // Progreso de cada archivo
+  fileProgress = signal<Map<string, FileUploadProgress>>(new Map());
+
+  uploading = signal(false);
+  resultMsg = signal('');
+
+  constructor(
+    private usersApi: UsuariosApi,
+    private uploadApi: UploadsApi
+  ) {
     this.load();
   }
 
   load() {
     this.usersResource.load(
       this.usersApi.list({
+        q: this.q(),
         page: this.page(),
+        role: this.role()
       })
     );
   }
 
   onSearch() {
-    // La búsqueda ahora es en frontend, el computed `usuarios` se actualiza solo.
+    this.page.set(1); // Reset a la primera página al buscar
+    this.load();
   }
 
   onPick(u: User) {
     this.selected.set(u);
     this.files.set([]);
-    this.resultMsg.set("");
+    this.fileProgress.set(new Map());
+    this.resultMsg.set('');
+  }
+
+  // Abrir modal de edición
+  openEditModal(user: User) {
+    this.editModal()?.open(user);
+  }
+
+  // Abrir modal de creación
+  openCreateModal() {
+    this.editModal()?.open(null);
+  }
+
+  // Manejar actualización de usuario
+  onUserUpdate(event: { user: User; role: string; estado: boolean }) {
+    const { user, role, estado } = event;
+
+    // Creamos el payload para la actualización.
+    // Usamos el usuario original y sobreescribimos las propiedades que cambiaron.
+    const updatedUserPayload = { ...user, role: role as Role, estado };
+
+    // Enviamos el payload completo al método de actualización.
+    this.usersApi.update(user.uid, updatedUserPayload).subscribe({
+      next: () => {
+        this.editModal()?.handleSuccess('Usuario actualizado correctamente.');
+        // Recargar la lista
+        this.load();
+      },
+      error: (e) => {
+        this.editModal()?.handleError(
+          e?.error?.msg || 'Error al actualizar el usuario.'
+        );
+      },
+    });
+  }
+
+  // Manejar creación de usuario
+  onUserCreate(event: { user: Partial<User> & { password?: string }; role: string }) {
+    const { user, role } = event;
+
+    if (!user.password) {
+      this.editModal()?.handleError('La contraseña es obligatoria para crear un usuario.');
+      return;
+    }
+
+    this.usersApi.create({ ...user, role: role as any, password: user.password })
+      .subscribe({
+        next: () => {
+          this.editModal()?.handleSuccess('Usuario creado correctamente.');
+          this.load(); // Recargar la lista
+        },
+        error: (e) => {
+          this.editModal()?.handleError(e?.error?.msg || 'Error al crear el usuario.');
+        }
+      });
   }
 
   onFileChange(ev: Event) {
     const input = ev.target as HTMLInputElement;
     const list = input.files ? Array.from(input.files) : [];
-    this.files.set(list);
+
+    // Validar tamaño de archivos (50 MB = 50 * 1024 * 1024 bytes)
+    const MAX_SIZE = 50 * 1024 * 1024;
+    const invalidFiles = list.filter(f => f.size > MAX_SIZE);
+
+    if (invalidFiles.length > 0) {
+      const names = invalidFiles.map(f => f.name).join(', ');
+      this.resultMsg.set(`⚠️ Archivos demasiado grandes (>50MB): ${names}`);
+
+      // Filtrar solo los archivos válidos
+      const validFiles = list.filter(f => f.size <= MAX_SIZE);
+      this.files.set(validFiles);
+    } else {
+      this.files.set(list);
+      this.resultMsg.set('');
+    }
+
+    this.fileProgress.set(new Map());
   }
 
   upload() {
     const user = this.selected();
     const files = this.files();
+
     if (!user || files.length === 0) return;
 
     this.uploading.set(true);
-    this.resultMsg.set("");
+    this.resultMsg.set('');
 
-    this.uploadApi.uploadForUser(user.uid, files).subscribe({
-      next: (res) => {
-        this.resultMsg.set(
-          `✓ Subidos ${res.documentos.length} archivo(s) correctamente`
-        );
+    // Inicializar el progreso de cada archivo
+    const progressMap = new Map<string, FileUploadProgress>();
+    files.forEach(file => {
+      progressMap.set(file.name, {
+        file,
+        progress: 0,
+        status: 'waiting'
+      });
+    });
+    this.fileProgress.set(progressMap);
+
+    // Subir cada archivo individualmente para rastrear el progreso
+    const uploads$ = files.map(file =>
+      this.uploadApi.uploadSingleFile(user.uid, file)
+    );
+
+    // Suscribirse a cada upload para actualizar el progreso
+    uploads$.forEach((upload$, index) => {
+      upload$.subscribe({
+        next: (progress) => {
+          // Actualizar el progreso de este archivo específico
+          const current = new Map(this.fileProgress());
+          current.set(progress.file.name, progress);
+          this.fileProgress.set(current);
+        },
+        error: (e) => {
+          // Marcar este archivo como error
+          const current = new Map(this.fileProgress());
+          const fileName = files[index].name;
+          current.set(fileName, {
+            file: files[index],
+            progress: 0,
+            status: 'error',
+            error: e?.error?.msg || 'Error al subir'
+          });
+          this.fileProgress.set(current);
+        }
+      });
+    });
+
+    // Esperar a que todos terminen
+    forkJoin(uploads$.map(upload$ =>
+      upload$.pipe()
+    )).subscribe({
+      next: () => {
         this.uploading.set(false);
-        this.files.set([]);
-        // Limpiar el input de archivo
-        const input = document.querySelector(
-          'input[type="file"]'
-        ) as HTMLInputElement;
-        if (input) input.value = "";
+
+        // Verificar si todos se subieron correctamente
+        const progress = Array.from(this.fileProgress().values());
+        const completed = progress.filter(p => p.status === 'completed').length;
+        const errors = progress.filter(p => p.status === 'error').length;
+
+        if (errors === 0) {
+          this.resultMsg.set(`✓ ${completed} archivo(s) subido(s) correctamente`);
+
+          // Limpiar después de 3 segundos
+          setTimeout(() => {
+            this.files.set([]);
+            this.fileProgress.set(new Map());
+            this.resultMsg.set('');
+
+            // Limpiar el input
+            const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+            if (input) input.value = '';
+          }, 3000);
+        } else {
+          this.resultMsg.set(`⚠️ ${completed} subido(s), ${errors} con error(es)`);
+        }
       },
       error: (e) => {
-        this.resultMsg.set(`✗ ${e?.error?.msg || "Error al subir archivos"}`);
         this.uploading.set(false);
-      },
+        this.resultMsg.set(`✗ ${e?.error?.msg || 'Error al subir archivos'}`);
+      }
     });
   }
 
-  changeRole(user: User) {
-    const newRole = user.role === "ADMIN_ROLE" ? "USER_ROLE" : "ADMIN_ROLE";
-    const message = `¿Deseas cambiar el rol de "${user.nombre}" a ${newRole}?`;
+  removeFile(file: File) {
+    this.files.update(files => files.filter(f => f !== file));
 
-    if (!confirm(message)) {
-      return;
-    }
-
-    this.changingRole.set(user.uid);
-
-    // Creamos el payload para la actualización.
-    // El backend espera 'nombre', 'email' y 'role'.
-    const updatedUser: Partial<User> = {
-      nombre: user.nombre,
-      email: user.email,
-      role: newRole,
-    };
-
-    this.usersApi.update(user.uid, updatedUser).subscribe({
-      next: () => {
-        // Éxito: recargamos la lista para ver el cambio
-        this.load();
-        this.changingRole.set(null);
-      },
-      error: (err) => {
-        console.error("Error al cambiar el rol:", err);
-        alert(err?.error?.msg || "No se pudo cambiar el rol");
-        this.changingRole.set(null);
-      },
-    });
+    // Remover del progreso también
+    const current = new Map(this.fileProgress());
+    current.delete(file.name);
+    this.fileProgress.set(current);
   }
 
-  toggleStatus(user: User, event: Event) {
-    const action = user.estado ? "desactivar" : "activar";
-    const message = `¿Estás seguro de que deseas ${action} a "${user.nombre}"?`;
-    const input = event.target as HTMLInputElement;
-
-    if (!confirm(message)) {
-      input.checked = user.estado;
-
-      return;
-    }
-
-    this.togglingStatus.set(user.uid);
-
-    this.usersApi.toggleStatus(user.uid).subscribe({
-      next: (res) => {
-        // Actualizamos el usuario en el estado local para reflejar el cambio instantáneamente
-        this.usersResource.setData({
-          ...this.usersState().data!,
-          items: this.usersState().data!.items.map((u) =>
-            u.uid === user.uid ? res.usuario : u
-          ),
-        });
-        this.togglingStatus.set(null);
-      },
-      error: (err) => {
-        alert(err?.error?.msg || `No se pudo ${action} al usuario.`);
-        input.checked = user.estado;
-
-        this.togglingStatus.set(null);
-      },
-    });
+  // Obtener el progreso de un archivo específico
+  getFileProgress(fileName: string): FileUploadProgress | undefined {
+    return this.fileProgress().get(fileName);
   }
 
-  removeFile(index: number) {
-    this.files.update((files) => files.filter((_, i) => i !== index));
-  }
-
-  /**
-   * Helper para normalizar strings: quita acentos y convierte a minúsculas.
-   */
-  private normalizeString(str: string): string {
-    return str
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase();
+  // Obtener array de progreso para el template
+  getProgressArray() {
+    return Array.from(this.fileProgress().values());
   }
 }

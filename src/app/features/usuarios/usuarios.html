@@ -1,27 +1,34 @@
 <div class="space-y-6">
   <div class="flex items-center justify-between">
     <h2 class="text-xl font-semibold">Usuarios</h2>
-    <button
-      (click)="load()"
-      [disabled]="loading()"
-      class="px-3 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm disabled:opacity-50">
-      ↻ Recargar
-    </button>
+    <div class="flex items-center gap-2">
+      <button
+        (click)="openCreateModal()"
+        class="px-3 py-1 rounded-lg bg-yellow-400 hover:bg-yellow-300 text-black text-sm font-medium disabled:opacity-50">
+        ＋ Crear Usuario
+      </button>
+      <button
+        (click)="load()"
+        [disabled]="loading()"
+        class="px-3 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm disabled:opacity-50">
+        ↻ Recargar
+      </button>
+    </div>
   </div>
 
   <!-- Barra de búsqueda -->
   <div class="flex gap-2">
     <input
-      [value]="terminoBusqueda()"
-      (input)="terminoBusqueda.set($any($event.target).value)"
+      [value]="q()"
+      (input)="q.set($any($event.target).value)"
       (keyup.enter)="onSearch()"
       placeholder="Buscar por nombre o email..."
       class="flex-1 px-3 py-2 rounded-lg bg-gray-900 border border-white/10 outline-none focus:border-yellow-400 transition-colors">
     <button
-      (click)="terminoBusqueda.set('')"
+      (click)="onSearch()"
       [disabled]="loading()"
       class="px-6 py-2 rounded-lg bg-yellow-400 text-black font-medium hover:bg-yellow-300 disabled:opacity-50 transition-colors">
-      Limpiar
+      Buscar
     </button>
   </div>
 
@@ -47,9 +54,9 @@
       } @else if (usuarios().length === 0) {
         <div class="py-8 text-center text-white/50">
           <p>No se encontraron usuarios</p>
-          @if (terminoBusqueda()) {
+          @if (q()) {
             <button
-              (click)="terminoBusqueda.set('')"
+              (click)="q.set(''); load()"
               class="mt-2 text-yellow-400 hover:text-yellow-300 text-sm">
               Limpiar búsqueda
             </button>
@@ -58,47 +65,26 @@
       } @else {
         <ul class="divide-y divide-white/5">
           @for (u of usuarios(); track u.uid) {
-            <li
-              class="py-3 flex items-center justify-between hover:bg-white/5 px-2 rounded transition-colors"
-              [class.bg-yellow-400/10]="selected()?.uid === u.uid"
-            >
-              <div class="text-white/80">
-                <div class="font-semibold">{{ u.nombre }}</div>
-                <div class="text-xs text-white/50">{{ u.email }}</div>
-                <div class="text-xs text-yellow-400 mt-1">{{ u.role }}</div>
-              </div>
-              <div class="flex items-center gap-2">
-                <button
-                  (click)="changeRole(u)"
-                  [disabled]="changingRole() === u.uid"
-                  [class.bg-blue-500]="u.role === 'ADMIN_ROLE'"
-                  [class.bg-gray-500]="u.role === 'USER_ROLE'"
-                  class="text-white font-bold py-1 px-2 rounded text-xs w-20 text-center transition-colors disabled:opacity-50"
-                >
-                  @if (changingRole() === u.uid) {
-                    <span>Cambiando...</span>
-                  } @else {
-                    <span>{{ u.role === 'ADMIN_ROLE' ? 'Admin' : 'Usuario' }}</span>
+            <li class="py-3 flex items-center justify-between hover:bg-white/5 px-2 rounded transition-colors">
+              <div class="text-white/80 flex-1">
+                <div class="flex items-center gap-2">
+                  <div class="font-semibold">{{ u.nombre }}</div>
+                  @if (u.estado === false) {
+                    <span class="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400">Inactivo</span>
                   }
+                </div>
+                <div class="text-xs text-white/50">{{ u.email }}</div>
+                <div class="text-xs text-yellow-400 mt-1">
+                  {{ u.role === 'ADMIN_ROLE' ? 'Administrador' : 'Usuario' }}
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <button
+                  (click)="openEditModal(u)"
+                  class="px-3 py-2 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors"
+                  title="Editar usuario">
+                  ✏️
                 </button>
-                <!-- BOTÓN PARA ACTIVAR/DESACTIVAR -->
-                <!-- INTERRUPTOR PARA ACTIVAR/DESACTIVAR -->
-                <label class="relative inline-flex items-center cursor-pointer" title="{{ u.estado ? 'Usuario Activo' : 'Usuario Inactivo' }}">
-                  <input
-                    type="checkbox"
-                    [checked]="u.estado"
-                    (change)="toggleStatus(u, $event)"
-                    [disabled]="togglingStatus() === u.uid"
-                    class="sr-only peer"
-                  >
-                  <div class="w-11 h-6 bg-gray-600 rounded-full peer
-                              peer-focus:ring-2 peer-focus:ring-yellow-400/50
-                              peer-checked:after:translate-x-full peer-checked:after:border-white
-                              after:content-[''] after:absolute after:top-0.5 after:left-[2px]
-                              after:bg-white after:border-gray-300 after:border after:rounded-full
-                              after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500
-                              peer-disabled:opacity-50"></div>
-                </label>
                 <button
                   class="px-4 py-2 bg-yellow-400 text-black rounded-lg font-medium hover:bg-yellow-300 transition-colors"
                   (click)="onPick(u)">
@@ -127,8 +113,8 @@
           <!-- Usuario seleccionado -->
           <div class="p-3 rounded-lg bg-yellow-400/10 border border-yellow-400/30">
             <div class="text-xs text-yellow-400 mb-1">Usuario seleccionado:</div>
-            <div class="font-semibold text-white">{{ selected()?.nombre }}</div>
-            <div class="text-sm text-white/60">{{ selected()?.email }}</div>
+            <div class="font-semibold text-white">{{ selected()!.nombre }}</div>
+            <div class="text-sm text-white/60">{{ selected()!.email }}</div>
           </div>
 
           <!-- Selector de archivos -->
@@ -137,31 +123,104 @@
               type="file"
               multiple
               (change)="onFileChange($event)"
-              accept=".pdf,.xml,.zip"
+              accept=".pdf,.xml,.zip,.rar"
+              [disabled]="uploading()"
               class="block w-full text-sm text-white/80
                      file:mr-3 file:py-2 file:px-4 file:rounded-lg
                      file:border-0 file:bg-yellow-400 file:text-black
                      file:font-medium hover:file:bg-yellow-300
-                     file:cursor-pointer cursor-pointer">
+                     file:cursor-pointer cursor-pointer
+                     disabled:opacity-50 disabled:cursor-not-allowed">
             <div class="text-xs text-white/50 mt-2">
-              📄 Formatos permitidos: PDF, XML, ZIP
+              📄 Formatos: PDF, XML, ZIP, RAR | 📦 Máximo: 50 MB por archivo
             </div>
           </div>
 
-          <!-- Lista de archivos seleccionados -->
+          <!-- Lista de archivos con barras de progreso -->
           @if (files().length > 0) {
-            <div class="space-y-2">
+            <div class="space-y-3">
               <div class="text-sm text-white/70 font-medium">
                 Archivos seleccionados ({{ files().length }}):
               </div>
-              @for (file of files(); track $index) {
-                <div class="flex items-center justify-between p-2 rounded bg-gray-800 text-sm">
-                  <span class="text-white/80 truncate flex-1">{{ file.name }}</span>
-                  <button
-                    (click)="removeFile($index)"
-                    class="ml-2 text-red-400 hover:text-red-300 px-2">
-                    ✕
-                  </button>
+
+              @for (file of files(); track file.name) {
+                @let progress = getFileProgress(file.name);
+
+                <div class="p-3 rounded-lg bg-gray-800 border border-white/10">
+                  <!-- Nombre y estado del archivo -->
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2 flex-1 min-w-0">
+                      <!-- Icono de estado -->
+                      @if (!progress || progress.status === 'waiting') {
+                        <span class="text-lg flex-shrink-0">⏳</span>
+                      } @else if (progress.status === 'uploading') {
+                        <span class="text-lg flex-shrink-0 animate-spin">⌛</span>
+                      } @else if (progress.status === 'completed') {
+                        <span class="text-lg flex-shrink-0 text-green-400">✓</span>
+                      } @else if (progress.status === 'error') {
+                        <span class="text-lg flex-shrink-0 text-red-400">✗</span>
+                      }
+
+                      <!-- Nombre del archivo -->
+                      <span class="text-sm text-white/90 truncate flex-1">
+                        {{ file.name }}
+                      </span>
+
+                      <!-- Tamaño -->
+                      <span class="text-xs text-white/50 flex-shrink-0">
+                        {{ (file.size / 1024) | number:'1.0-0' }} KB
+                      </span>
+                    </div>
+
+                    <!-- Botón eliminar (solo si no está subiendo) -->
+                    @if (!uploading()) {
+                      <button
+                        (click)="removeFile(file)"
+                        class="ml-2 text-red-400 hover:text-red-300 px-2 flex-shrink-0">
+                        ✕
+                      </button>
+                    }
+                  </div>
+
+                  <!-- Barra de progreso -->
+                  @if (progress && (progress.status === 'uploading' || progress.status === 'completed')) {
+                    <div class="relative w-full h-2 bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        class="absolute inset-y-0 left-0 rounded-full transition-all duration-300"
+                        [class.bg-yellow-400]="progress.status === 'uploading'"
+                        [class.bg-green-400]="progress.status === 'completed'"
+                        [style.width.%]="progress.progress">
+                      </div>
+                    </div>
+
+                    <!-- Porcentaje -->
+                    <div class="flex items-center justify-between mt-1">
+                      <span class="text-xs text-white/60">
+                        @if (progress.status === 'uploading') {
+                          <span>Subiendo...</span>
+                        } @else if (progress.status === 'completed') {
+                          <span class="text-green-400">Completado</span>
+                        }
+                      </span>
+                      <span class="text-xs font-semibold text-white/80">
+                        {{ progress.progress }}%
+                      </span>
+                    </div>
+                  }
+
+                  <!-- Estado esperando -->
+                  @if (!progress || progress.status === 'waiting') {
+                    <div class="text-xs text-white/50 mt-1">
+                      Esperando...
+                    </div>
+                  }
+
+                  <!-- Mensaje de error -->
+                  @if (progress && progress.status === 'error') {
+                    <div class="text-xs text-red-400 mt-1">
+                      {{ progress.error }}
+                    </div>
+                  }
                 </div>
               }
             </div>
@@ -175,7 +234,10 @@
                    hover:bg-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed
                    transition-colors">
             @if (uploading()) {
-              <span>⏳ Subiendo archivos...</span>
+              <span class="flex items-center justify-center gap-2">
+                <span class="animate-spin inline-block w-4 h-4 border-2 border-black border-t-transparent rounded-full"></span>
+                Subiendo archivos...
+              </span>
             } @else {
               <span>↑ Subir {{ files().length }} archivo(s)</span>
             }
@@ -187,6 +249,9 @@
                  [class.bg-green-500/10]="resultMsg().startsWith('✓')"
                  [class.border-green-500/30]="resultMsg().startsWith('✓')"
                  [class.text-green-300]="resultMsg().startsWith('✓')"
+                 [class.bg-orange-500/10]="resultMsg().startsWith('⚠️')"
+                 [class.border-orange-500/30]="resultMsg().startsWith('⚠️')"
+                 [class.text-orange-300]="resultMsg().startsWith('⚠️')"
                  [class.bg-red-500/10]="resultMsg().startsWith('✗')"
                  [class.border-red-500/30]="resultMsg().startsWith('✗')"
                  [class.text-red-300]="resultMsg().startsWith('✗')"
@@ -199,3 +264,11 @@
     </div>
   </div>
 </div>
+
+<!-- Modal de edición de usuario -->
+<app-edit-user-modal
+  #editModal
+  (userUpdated)="onUserUpdate($event)"
+  (userCreated)="onUserCreate($event)"
+>
+</app-edit-user-modal>
