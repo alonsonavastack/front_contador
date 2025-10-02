@@ -1,0 +1,172 @@
+<div class="space-y-4">
+  <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+    <h2 class="text-xl font-semibold">Documentos (Admin)</h2>
+    <div class="flex flex-col md:flex-row items-center gap-4">
+      <!-- Filtro por nombre -->
+      <div class="flex items-center gap-2">
+        <label for="name-filter" class="text-sm text-white/60">Buscar:</label>
+        <input
+          id="name-filter"
+          type="text"
+          placeholder="Nombre del archivo..."
+          [value]="q()"
+          (input)="onSearchChange($any($event.target).value)"
+          class="px-2 py-1 rounded-lg bg-gray-900 border border-white/10 outline-none focus:border-yellow-400 transition-colors"
+        />
+      </div>
+      <!-- Filtro por mes -->
+      <div class="flex items-center gap-2">
+        <label for="month-filter" class="text-sm text-white/60">Mes:</label>
+        <input
+          id="month-filter"
+          type="month"
+          [value]="selectedMonth()"
+          (input)="onMonthChange($any($event.target).value)"
+          class="px-2 py-1 rounded-lg bg-gray-900 border border-white/10 outline-none focus:border-yellow-400 transition-colors"
+        />
+      </div>
+      <!-- Botón para limpiar filtros -->
+      <button
+        (click)="clearFilters()"
+        class="px-4 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm disabled:opacity-50"
+      >
+        Limpiar filtros
+      </button>
+    </div>
+  </div>
+
+  <!-- Información de resultados -->
+  @if (!loading() && !error()) {
+    <div class="text-sm text-white/60">
+      Mostrando {{ items().length }} de {{ total() }} documentos totales
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="flex items-center justify-center py-12">
+      <div class="animate-pulse text-white/60">Cargando documentos...</div>
+    </div>
+  } @else if (error()) {
+    <div class="p-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-300">
+      <p class="font-semibold mb-1">Error al cargar documentos</p>
+      <p class="text-sm">{{ error().message || 'Error desconocido' }}</p>
+      <button
+        (click)="load()"
+        class="mt-3 px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600">
+        Reintentar
+      </button>
+    </div>
+  } @else if (items().length === 0) {
+    <div class="py-12 text-center text-white/50">
+      <p>No se encontraron documentos</p>
+      @if (q()) {
+        <button
+          (click)="clearFilters()"
+          class="mt-2 text-yellow-400 hover:text-yellow-300 text-sm">
+          Limpiar búsqueda
+        </button>
+      }
+    </div>
+  } @else {
+    <!-- Tabla de documentos -->
+    <div class="overflow-x-auto border border-white/10 rounded-xl">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-900/80 border-b border-white/10">
+          <tr>
+            <th class="text-left p-3 font-semibold text-white/80">Nombre</th>
+            <th class="text-left p-3 font-semibold text-white/80">Tipo</th>
+            <th class="text-left p-3 font-semibold text-white/80">Usuario</th>
+            <th class="text-left p-3 font-semibold text-white/80">Correo</th>
+            <th class="text-left p-3 font-semibold text-white/80">Fecha</th>
+            <th class="text-center p-3 font-semibold text-white/80">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (d of items(); track d._id) {
+            <tr class="border-t border-white/10 hover:bg-white/5 transition-colors">
+              <td class="p-3">
+                <div class="font-medium text-white/90">{{ d.nombre }}</div>
+              </td>
+              <td class="p-3">
+                <span class="px-2 py-1 rounded bg-gray-800 text-xs uppercase font-semibold text-yellow-400">
+                  {{ d.ext }}
+                </span>
+              </td>
+              <td class="p-3 text-white/70">
+                {{ getUserName(d) }}
+              </td>
+              <td class="p-3 text-white/70">
+                {{ getUserEmail(d) }}
+              </td>
+              <td class="p-3 text-white/60 text-xs">
+                {{ d.createdAt | date:'short' }}
+              </td>
+              <td class="p-3">
+                <div class="flex items-center justify-center gap-2">
+                  <a
+                    [href]="getDocUrl(d)"
+                    [download]="d.nombre + '.' + d.ext"
+                    class="px-3 py-1 rounded bg-yellow-400 text-black font-medium hover:bg-yellow-300 transition-colors text-xs">
+                    Descargar
+                  </a>
+                  <button
+                    (click)="deleteDoc(d)"
+                    [disabled]="deleting() === d._id"
+                    class="px-3 py-1 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 disabled:opacity-50 transition-colors text-xs font-medium">
+                    @if (deleting() === d._id) {
+                      <span>...</span>
+                    } @else {
+                      <span>Eliminar</span>
+                    }
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Paginación -->
+    @if (total() > 10) {
+      <div class="flex items-center justify-between p-4 rounded-xl border border-white/10 bg-gray-900">
+        <button
+          (click)="prevPage()"
+          [disabled]="page() === 1"
+          class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+          ← Anterior
+        </button>
+
+        <div class="flex items-center gap-4">
+          <!-- Selector de tamaño de página -->
+          <div class="flex items-center gap-2">
+            <select
+              [value]="pageSize()"
+              (change)="onPageSizeChange($any($event.target).value)"
+              class="px-2 py-1 rounded-lg bg-gray-800 border-none text-white/80 text-sm outline-none focus:ring-2 focus:ring-yellow-400"
+            >
+              <option value="10">10 / página</option>
+              <option value="25">25 / página</option>
+              <option value="50">50 / página</option>
+            </select>
+          </div>
+          <!-- Indicador de página actual -->
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-white/60">Página</span>
+            <span class="px-3 py-1 rounded-lg bg-yellow-400 text-black font-semibold">
+              {{ page() }}
+            </span>
+            <span class="text-sm text-white/60">de {{ pages() }}</span>
+          </div>
+        </div>
+
+        <button
+          (click)="nextPage()"
+          [disabled]="page() === pages()"
+          class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+          Siguiente →
+        </button>
+      </div>
+    }
+  }
+</div>

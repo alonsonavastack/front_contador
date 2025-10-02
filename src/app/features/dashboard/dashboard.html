@@ -1,0 +1,90 @@
+<div class="min-h-screen bg-gray-950 text-white flex">
+  <!-- Sidebar -->
+  <aside 
+    class="transition-all bg-gray-900 border-r border-white/10" 
+    [class.w-72]="menuOpen()"
+    [class.w-16]="!menuOpen()">
+    
+    <div class="p-4 flex items-center justify-between border-b border-white/10">
+      @if (menuOpen()) {
+        <div class="font-bold text-yellow-400 text-lg">Contador</div>
+      }
+      <button 
+        class="text-white/70 hover:text-white transition-colors px-2 py-1" 
+        (click)="toggleMenu()">
+        @if (menuOpen()) {
+          <span class="text-xl">‹</span>
+        } @else {
+          <span class="text-xl">›</span>
+        }
+      </button>
+    </div>
+    
+    <nav class="px-2 py-4 space-y-1">
+      <a 
+        routerLink="/dashboard/mis-documentos" 
+        routerLinkActive="bg-yellow-400 text-black"
+        class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors">
+        <span class="text-xl">📄</span>
+        @if (menuOpen()) {
+          <span>Mis Documentos</span>
+        }
+      </a>
+      
+      @if (role() === 'ADMIN_ROLE') {
+        <a 
+          routerLink="/dashboard/usuarios" 
+          routerLinkActive="bg-yellow-400 text-black"
+          class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors">
+          <span class="text-xl">👥</span>
+          @if (menuOpen()) {
+            <span>Usuarios</span>
+          }
+        </a>
+        
+        <a 
+          routerLink="/dashboard/docs-admin" 
+          routerLinkActive="bg-yellow-400 text-black"
+          class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors">
+          <span class="text-xl">📋</span>
+          @if (menuOpen()) {
+            <span>Admin Documentos</span>
+          }
+        </a>
+      }
+    </nav>
+  </aside>
+
+  <!-- Main content -->
+  <main class="flex-1 flex flex-col">
+    <!-- Header -->
+    <header class="flex items-center justify-between p-4 border-b border-white/10 bg-gray-900">
+      <div class="text-white/80">
+        @if (user()) {
+          <span>Bienvenido, <strong class="text-white">{{ user()!.nombre }}</strong></span>
+        } @else {
+          <span>Cargando...</span>
+        }
+      </div>
+      
+      <div class="flex items-center gap-3">
+        @if (user()) {
+          <span class="text-xs px-2 py-1 rounded bg-yellow-400/20 text-yellow-400">
+            {{ role() === 'ADMIN_ROLE' ? 'Admin' : 'Usuario' }}
+          </span>
+        }
+        
+        <button 
+          class="px-4 py-2 rounded-lg bg-yellow-400 text-black font-medium hover:bg-yellow-300 transition-colors" 
+          (click)="logout()">
+          Salir
+        </button>
+      </div>
+    </header>
+    
+    <!-- Content -->
+    <section class="flex-1 p-6 overflow-auto">
+      <router-outlet />
+    </section>
+  </main>
+</div>
