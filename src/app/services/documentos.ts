@@ -51,7 +51,7 @@ export class DocumentosApi {
    */
   update(id: string, data: Partial<Documento>) {
     return this.http.put<{ ok: boolean; documento: Documento }>(
-      `${this.base}/${id}`, 
+      `${this.base}/${id}`,
       data
     );
   }
@@ -62,7 +62,7 @@ export class DocumentosApi {
    */
   edit(id: string, data: Partial<Documento>) {
     return this.http.put<{ ok: boolean; documento: Documento }>(
-      `${this.base}/editar-documento/${id}`, 
+      `${this.base}/editar-documento/${id}`,
       data
     );
   }

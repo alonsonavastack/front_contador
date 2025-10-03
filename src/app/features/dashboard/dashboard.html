@@ -11,7 +11,8 @@
       }
       <button 
         class="text-white/70 hover:text-white transition-colors px-2 py-1" 
-        (click)="toggleMenu()">
+        (click)="toggleMenu()"
+        title="Toggle menu">
         @if (menuOpen()) {
           <span class="text-xl">‹</span>
         } @else {
@@ -21,31 +22,50 @@
     </div>
     
     <nav class="px-2 py-4 space-y-1">
+      <!-- Mis Documentos -->
       <a 
         routerLink="/dashboard/mis-documentos" 
         routerLinkActive="bg-yellow-400 text-black"
-        class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors">
+        [routerLinkActiveOptions]="{exact: false}"
+        class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors text-white">
         <span class="text-xl">📄</span>
         @if (menuOpen()) {
           <span>Mis Documentos</span>
         }
       </a>
       
+      <!-- Mi Perfil -->
+      <a 
+        routerLink="/dashboard/perfil" 
+        routerLinkActive="bg-yellow-400 text-black"
+        [routerLinkActiveOptions]="{exact: false}"
+        class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors text-white">
+        <span class="text-xl">👤</span>
+        @if (menuOpen()) {
+          <span>Mi Perfil</span>
+        }
+      </a>
+      
+      <!-- Opciones de Admin -->
       @if (role() === 'ADMIN_ROLE') {
+        <!-- Usuarios -->
         <a 
           routerLink="/dashboard/usuarios" 
           routerLinkActive="bg-yellow-400 text-black"
-          class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors">
+          [routerLinkActiveOptions]="{exact: false}"
+          class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors text-white">
           <span class="text-xl">👥</span>
           @if (menuOpen()) {
             <span>Usuarios</span>
           }
         </a>
         
+        <!-- Admin Documentos -->
         <a 
           routerLink="/dashboard/docs-admin" 
           routerLinkActive="bg-yellow-400 text-black"
-          class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors">
+          [routerLinkActiveOptions]="{exact: false}"
+          class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors text-white">
           <span class="text-xl">📋</span>
           @if (menuOpen()) {
             <span>Admin Documentos</span>

@@ -58,29 +58,42 @@ export class AuthService {
   }
 
   login(email: string, password: string) {
-    return this.http.post<AuthResponse>(`${environment.api}/login`, {
+    return this.http.post<AuthResponse>(`${environment.api}/login/login`, {
       email,
       password
     });
   }
 
-  setSession(res: AuthResponse) {
+  register(nombre: string, email: string, password: string) {
+    // Asumimos que el rol por defecto es 'USER_ROLE'
+    return this.http.post<AuthResponse>(`${environment.api}/login/register`, {
+      nombre,
+      email,
+      password,
+    });
+  }
+
+  setSession(res: any) {
     console.log('Guardando sesión:', res);
 
     // Validar que la respuesta sea correcta
-    if (!res.usuario || !res.token || res.token.trim() === '') {
+    // El backend puede retornar 'user' o 'usuario'
+    const user = res.user || res.usuario;
+    const token = res.token;
+
+    if (!user || !token || token.trim() === '') {
       console.error('Respuesta de login inválida:', res);
       throw new Error('Respuesta de autenticación inválida');
     }
 
     // Actualizar signals
-    this._user.set(res.usuario);
-    this._token.set(res.token);
+    this._user.set(user);
+    this._token.set(token);
 
     // Guardar en localStorage
     try {
-      localStorage.setItem('user', JSON.stringify(res.usuario));
-      localStorage.setItem('token', res.token);
+      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('token', token);
       console.log('Sesión guardada correctamente');
     } catch (e) {
       console.error('Error al guardar sesión:', e);

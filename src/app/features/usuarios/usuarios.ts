@@ -1,5 +1,6 @@
 import { Component, signal, computed, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms'; // <--- Importar FormsModule
 import type { User, Role } from '../../shared/types';
 import { UsuariosApi } from '../../services/usuarios';
 import { UploadsApi, type FileUploadProgress } from '../../services/uploads';
@@ -7,10 +8,18 @@ import { createResourceState } from '../../core/http-resource';
 import { EditUserModalComponent } from '../../shared/edit-user-modal.component';
 import { forkJoin } from 'rxjs';
 
+// Helper para normalizar texto (quitar tildes y a minúsculas)
+function normalizeText(text: string): string {
+  if (!text) return '';
+  return text
+    .normalize('NFD') // Separa caracteres de sus acentos
+    .replace(/[\u0300-\u036f]/g, '') // Elimina los acentos
+    .toLowerCase();
+}
 @Component({
   standalone: true,
   selector: 'app-usuarios',
-  imports: [CommonModule, EditUserModalComponent, ],
+  imports: [CommonModule, EditUserModalComponent, FormsModule], // <--- Añadir FormsModule a los imports
   templateUrl: './usuarios.html',
 })
 export class UsuariosPage {
@@ -21,15 +30,53 @@ export class UsuariosPage {
   q = signal('');
   page = signal(1);
   role = signal<string>('');
-
+  status = signal<string>(''); // 'true', 'false', o '' para todos
+  pageSize = signal(10); // Usuarios por página
   // Estado del listado de usuarios
-  private usersResource = createResourceState<{ ok: boolean; items: User[]; total: number; pages: number }>();
-
+  private usersResource = createResourceState<{ ok: boolean; items: User[] }>();
   usersState = this.usersResource.state;
-  usuarios = computed(() => this.usersState().data?.items ?? []);
+
+  // Lógica de filtrado y paginación en el cliente (como en mis-docs)
+  private paginatedData = computed(() => {
+    const originalUsers = this.usersState().data?.items ?? [];
+    const query = normalizeText(this.q());
+    const selectedRole = this.role();
+    const selectedStatus = this.status();
+    const page = this.page();
+    const pageSize = this.pageSize(); // Tamaño de página fijo
+
+    // 1. Filtrar
+    let filteredUsers = originalUsers;
+    if (selectedRole) {
+      filteredUsers = filteredUsers.filter(u => u.role === selectedRole);
+    }
+    if (selectedStatus !== '') {
+      const statusAsBoolean = selectedStatus === 'true';
+      filteredUsers = filteredUsers.filter(u => u.estado === statusAsBoolean);
+    }
+    if (query) {
+      filteredUsers = filteredUsers.filter(u =>
+        normalizeText(u.nombre).includes(query) || normalizeText(u.email).includes(query)
+      );
+    }
+
+    // 2. Paginar
+    const totalItems = filteredUsers.length;
+    const totalPages = Math.ceil(totalItems / pageSize);
+    const pageIndex = page - 1;
+    const start = pageIndex * pageSize;
+    const end = start + pageSize;
+    const items = filteredUsers.slice(start, end);
+
+    return { items, totalItems, totalPages };
+  });
+
+  // Signals expuestos a la plantilla
+  usuarios = computed(() => this.paginatedData().items);
   loading = computed(() => this.usersState().loading);
   error = computed(() => this.usersState().error);
-  totalPages = computed(() => this.usersState().data?.pages ?? 1);
+  totalItems = computed(() => this.paginatedData().totalItems);
+  totalPages = computed(() => this.paginatedData().totalPages);
 
   // Estado de subida de archivos
   selected = signal<User | null>(null);
@@ -50,17 +97,38 @@ export class UsuariosPage {
 
   load() {
     this.usersResource.load(
-      this.usersApi.list({
-        q: this.q(),
-        page: this.page(),
-        role: this.role()
-      })
+      this.usersApi.list()
     );
   }
 
   onSearch() {
-    this.page.set(1); // Reset a la primera página al buscar
-    this.load();
+    this.page.set(1);
+    // No es necesario llamar a this.load() aquí, el computed signal se encarga.
+  }
+
+  onPageSizeChange(newSize: string) {
+    this.pageSize.set(Number(newSize));
+    this.page.set(1); // Volver a la primera página
+  }
+
+  clearFilters() {
+    this.q.set('');
+    this.role.set('');
+    this.status.set('');
+    this.page.set(1);
+  }
+
+  // Métodos para la paginación
+   nextPage() {
+    if (this.page() < this.totalPages()) {
+      this.page.update(p => p + 1);
+    }
+  }
+
+  prevPage() {
+    if (this.page() > 1) {
+      this.page.update(p => p - 1);
+    }
   }
 
   onPick(u: User) {

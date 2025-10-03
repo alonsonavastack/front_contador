@@ -15,22 +15,13 @@ export class UsuariosApi {
    * GET /usuarios
    * El backend retorna: { ok: true, usuarios: [...] }
    */
-  list(params: { q?: string; page?: number; limit?: number; role?: string } = {}) {
-    return this.http.get<{ ok: boolean; usuarios: User[] }>(this.base, {
-      params: {
-        ...(params.q && { q: params.q }),
-        ...(params.page && { page: params.page.toString() }),
-        ...(params.limit && { limit: params.limit.toString() }),
-        ...(params.role && { role: params.role })
-      }
-    }).pipe(
+
+  list() {
+    return this.http.get<{ ok: boolean; usuarios: User[] }>(this.base, {}).pipe(
       // Transformar al formato que esperan los componentes
       map(res => ({
-        ok: res.ok,
-        items: res.usuarios,
-        total: res.usuarios.length,
-        page: params.page || 1,
-        pages: 1
+        ok: res.ok, // Mantener el 'ok'
+        items: res.usuarios ?? [] // Devolver solo los 'items'
       }))
     );
   }
@@ -61,6 +52,17 @@ export class UsuariosApi {
     return this.http.put<{ ok: boolean; usuario: User }>(
       `${this.base}/${id}`,
       data
+    );
+  }
+
+  /**
+   * Cambia la contraseña de un usuario
+   * PUT /usuarios/change-password/:id
+   */
+  changePassword(id: string, oldPassword: string, newPassword: string) {
+    return this.http.put<{ ok: boolean; msg: string }>(
+      `${this.base}/change-password/${id}`,
+      { oldPassword, newPassword }
     );
   }
 
