@@ -1,6 +1,7 @@
-<div class="space-y-4">
+<div class="space-y-4 p-4 sm:p-0">
+  <!-- Header con botón de recargar -->
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-    <h2 class="text-xl font-semibold">Mis Documentos</h2>
+    <h2 class="text-xl sm:text-2xl font-semibold">Mis documentos</h2>
     <div class="w-full sm:w-auto flex flex-col sm:flex-row items-center gap-3">
       <!-- Filtro por nombre -->
       <div class="w-full">
@@ -33,64 +34,76 @@
         Limpiar filtros
       </button>
     </div>
+
   </div>
-<!-- Información de resultados -->
+
+  <!-- Info de resultados -->
   @if (!loading() && !error()) {
-    <div class="text-sm text-white/60">
-      Mostrando {{ items().length }} de {{ total() }} documentos totales
+    <div class="text-sm text-white/60 px-1">
+      Mostrando {{ items().length }} de {{ total() }} documentos
     </div>
   }
 
+  <!-- Estados -->
   @if (loading()) {
     <div class="flex items-center justify-center py-12">
-      <div class="animate-pulse text-white/60">Cargando documentos...</div>
+      <div class="animate-pulse text-white/60">Cargando...</div>
     </div>
   } @else if (error()) {
     <div class="p-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-300">
-      <p class="font-semibold mb-1">Error al cargar tus documentos</p>
-        <p class="text-sm">
-          No se pudo conectar con el servidor. Por favor, verifica tu conexión o inténtalo de nuevo más tarde.
-        </p>
+      <p class="font-semibold mb-1">Error al cargar documentos</p>
+      <p class="text-sm">{{ error().message || 'Error desconocido' }}</p>
       <button
         (click)="load()"
-        class="mt-3 px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600">
+        class="mt-3 w-full sm:w-auto px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600">
         Reintentar
       </button>
     </div>
   } @else if (items().length === 0) {
-    <div class="py-12 text-center text-white/50">
-      <p>No se encontraron documentos</p>
-      @if (q()) {
-        <button
-          (click)="clearFilters()"
-          class="mt-2 text-yellow-400 hover:text-yellow-300 text-sm">
-          Limpiar búsqueda
-        </button>
-      }
+    <div class="p-8 text-center text-white/50">
+      <p class="text-3xl mb-3">📄</p>
+      <p class="text-sm sm:text-base">No tienes documentos aún</p>
     </div>
   } @else {
-    <!-- Tabla de documentos -->
-    <div class="border border-white/10 rounded-xl overflow-x-auto min-w-0">
-      <!-- Vista de Tabla para Escritorio -->
-      <div class="hidden md:block">
-        <table class="min-w-full text-sm">
+
+    <!-- Tabla (desktop) -->
+    <div class="hidden lg:block border border-white/10 rounded-xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
           <thead class="bg-gray-900/80 border-b border-white/10">
             <tr>
-              <th class="text-left p-3 font-semibold text-white/80">Nombre</th>
-              <th class="text-left p-3 font-semibold text-white/80">Tipo</th>
-              <th class="text-left p-3 font-semibold text-white/80">Fecha</th>
-              <th class="text-center p-3 font-semibold text-white/80">Acciones</th>
+              <th class="text-left p-3 font-semibold text-white/80 whitespace-nowrap">Nombre</th>
+              <th class="text-left p-3 font-semibold text-white/80 whitespace-nowrap">Tipo</th>
+              <th class="text-left p-3 font-semibold text-white/80 whitespace-nowrap">Tamaño</th>
+              <th class="text-left p-3 font-semibold text-white/80 whitespace-nowrap">Fecha</th>
+              <th class="text-center p-3 font-semibold text-white/80 whitespace-nowrap">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            @for (doc of items(); track doc._id) {
+            @for (d of items(); track d._id) {
               <tr class="border-t border-white/10 hover:bg-white/5 transition-colors">
-                <td class="p-3"><div class="font-medium text-white/90">{{ doc.nombre }}</div></td>
-                <td class="p-3"><span class="px-2 py-1 rounded bg-gray-800 text-xs uppercase font-semibold text-yellow-400">{{ doc.ext }}</span></td>
-                <td class="p-3 text-white/60 text-xs">{{ doc.createdAt | date:'short' }}</td>
                 <td class="p-3">
-                  <div class="flex items-center justify-center gap-2">
-                    <a [href]="getDocUrl(doc)" [download]="doc.nombre + '.' + doc.ext" class="px-3 py-1 rounded bg-yellow-400 text-black font-medium hover:bg-yellow-300 transition-colors text-xs">Descargar</a>
+                  <div class="font-medium text-white/90 max-w-xs truncate" [title]="d.nombre">{{ d.nombre }}</div>
+                </td>
+                <td class="p-3">
+                  <span class="px-2 py-1 rounded bg-gray-800 text-xs uppercase font-semibold text-yellow-400">
+                    {{ d.ext }}
+                  </span>
+                </td>
+                <td class="p-3 text-white/70 whitespace-nowrap">
+                  {{ (d.size/1024) | number:'1.0-0' }} KB
+                </td>
+                <td class="p-3 text-white/60 text-xs whitespace-nowrap">
+                  {{ d.createdAt | date:'short' }}
+                </td>
+                <td class="p-3">
+                  <div class="flex items-center justify-center">
+                    <a
+                      [href]="getDocUrl(d)"
+                      target="_blank"
+                      class="px-3 py-1 rounded bg-yellow-400 text-black font-medium hover:bg-yellow-300 transition-colors text-xs whitespace-nowrap">
+                      Abrir
+                    </a>
                   </div>
                 </td>
               </tr>
@@ -98,72 +111,65 @@
           </tbody>
         </table>
       </div>
+    </div>
 
-      <!-- Vista de Lista/Tarjetas para Móvil -->
-      <ul class="divide-y divide-white/10 md:hidden">
-        @for (doc of items(); track doc._id) {
-          <li class="p-4 space-y-2">
-            <div class="flex justify-between items-start">
-              <div class="font-medium text-white/90">{{ doc.nombre }}</div>
-              <span class="ml-2 flex-shrink-0 px-2 py-1 rounded bg-gray-800 text-xs uppercase font-semibold text-yellow-400">{{ doc.ext }}</span>
-            </div>
-            <div class="flex justify-between items-center">
-              <div class="text-white/60 text-xs">
-                {{ doc.createdAt | date:'short' }}
+    <!-- Cards (móvil/tablet) -->
+    <div class="lg:hidden space-y-3">
+      @for (d of items(); track d._id) {
+        <div class="rounded-xl border border-white/10 bg-gray-900 p-4 space-y-3 hover:border-yellow-400/30 transition-colors">
+          <!-- Header de la tarjeta -->
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex-1 min-w-0">
+              <h3 class="font-medium text-white/90 truncate" [title]="d.nombre">{{ d.nombre }}</h3>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="px-2 py-0.5 rounded bg-gray-800 text-xs uppercase font-semibold text-yellow-400">
+                  {{ d.ext }}
+                </span>
+                <span class="text-xs text-white/50">
+                  {{ (d.size/1024) | number:'1.0-0' }} KB
+                </span>
               </div>
-              <a
-                [href]="getDocUrl(doc)"
-                [download]="doc.nombre + '.' + doc.ext"
-                class="px-3 py-1 rounded bg-yellow-400 text-black font-medium hover:bg-yellow-300 transition-colors text-xs">
-                Descargar
-              </a>
             </div>
-          </li>
-        }
-      </ul>
+          </div>
+
+          <!-- Fecha -->
+          <div class="flex items-center gap-2 p-2 rounded-lg bg-gray-800/50">
+            <span class="text-xl">🗓️</span>
+            <div class="text-xs text-white/60">{{ d.createdAt | date:'short' }}</div>
+          </div>
+
+          <!-- Botón -->
+          <a
+            [href]="getDocUrl(d)"
+            target="_blank"
+            class="block w-full text-center px-4 py-2 rounded-lg bg-yellow-400 text-black font-medium hover:bg-yellow-300 transition-colors text-sm">
+            Abrir
+          </a>
+        </div>
+      }
     </div>
 
     <!-- Paginación -->
-    @if (total() > 10) {
-      <div class="flex flex-col md:flex-row items-center justify-between gap-4 p-4 rounded-xl border border-white/10 bg-gray-900">
-        <button
-          (click)="prevPage()"
-          [disabled]="page() === 1"
-          class="w-full md:w-auto px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-          ← Anterior
-        </button>
-
-        <div class="flex flex-col md:flex-row items-center gap-4">
-          <!-- Selector de tamaño de página -->
-          <div class="flex items-center gap-2">
-            <select
-              [value]="pageSize()"
-              (change)="onPageSizeChange($any($event.target).value)"
-              class="px-2 py-1 rounded-lg bg-gray-800 border-none text-white/80 text-sm outline-none focus:ring-2 focus:ring-yellow-400"
-            >
-              <option value="10">10 / página</option>
-              <option value="25">25 / página</option>
-              <option value="50">50 / página</option>
-            </select>
-          </div>
-          <!-- Indicador de página actual -->
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-white/60">Página</span>
-            <span class="px-3 py-1 rounded-lg bg-yellow-400 text-black font-semibold">
-              {{ page() }}
-            </span>
-            <span class="text-sm text-white/60">de {{ pages() }}</span>
-          </div>
+    @if (pages() > 1) {
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 p-4 rounded-xl border border-white/10 bg-gray-900">
+        <div class="text-sm text-white/60">
+          Página {{ page() }} de {{ pages() }} ({{ total() }} total)
         </div>
-
-        <button
-          (click)="nextPage()"
-          [disabled]="page() === pages()"
-          class="w-full md:w-auto px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-          Siguiente →
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            (click)="prevPage()"
+            [disabled]="page() === 1"
+            class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm">
+            ← Anterior
+          </button>
+          <button
+            (click)="nextPage()"
+            [disabled]="page() === pages()"
+            class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm">
+            Siguiente →
+          </button>
+        </div>
       </div>
     }
   }
-
 </div>

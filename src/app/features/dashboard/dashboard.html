@@ -1,36 +1,60 @@
-<div class="min-h-screen bg-gray-950 text-white flex">
+<div class="min-h-screen bg-gray-950 text-white flex flex-col lg:flex-row">
+  <!-- Overlay para móvil (cerrar menú al hacer click fuera) -->
+  @if (menuOpen() && !isDesktop()) {
+    <div 
+      class="fixed inset-0 bg-black/50 z-30 lg:hidden"
+      (click)="toggleMenu()">
+    </div>
+  }
+
   <!-- Sidebar -->
   <aside 
-    class="transition-all bg-gray-900 border-r border-white/10" 
-    [class.w-72]="menuOpen()"
-    [class.w-16]="!menuOpen()">
+    class="transition-all bg-gray-900 border-white/10 flex-shrink-0 z-40"
+    [class.fixed]="!isDesktop()"
+    [class.inset-y-0]="!isDesktop()"
+    [class.left-0]="!isDesktop()"
+    [class.-translate-x-full]="!isDesktop() && !menuOpen()"
+    [class.translate-x-0]="!isDesktop() && menuOpen()"
+    [class.w-72]="!isDesktop() || menuOpen()"
+    [class.lg:relative]="isDesktop()"
+    [class.lg:border-r]="isDesktop()"
+    [class.lg:w-72]="isDesktop() && menuOpen()"
+    [class.lg:w-16]="isDesktop() && !menuOpen()">
     
+    <!-- Header del sidebar -->
     <div class="p-4 flex items-center justify-between border-b border-white/10">
       @if (menuOpen()) {
         <div class="font-bold text-yellow-400 text-lg">Contador</div>
       }
       <button 
-        class="text-white/70 hover:text-white transition-colors px-2 py-1" 
+        class="text-white hover:text-yellow-400 transition-colors p-2" 
+        [class.ml-auto]="menuOpen()"
         (click)="toggleMenu()"
-        title="Toggle menu">
+        aria-label="Toggle menu">
         @if (menuOpen()) {
-          <span class="text-xl">‹</span>
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
         } @else {
-          <span class="text-xl">›</span>
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
         }
       </button>
     </div>
     
-    <nav class="px-2 py-4 space-y-1">
+    <!-- Navegación -->
+    <nav class="px-2 py-4 space-y-1 overflow-y-auto max-h-[calc(100vh-5rem)]">
       <!-- Mis Documentos -->
       <a 
         routerLink="/dashboard/mis-documentos" 
         routerLinkActive="bg-yellow-400 text-black"
         [routerLinkActiveOptions]="{exact: false}"
-        class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors text-white">
-        <span class="text-xl">📄</span>
+        (click)="isDesktop() ? null : toggleMenu()"
+        class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-gray-800 transition-colors text-white font-medium">
+        <span class="text-xl flex-shrink-0">📄</span>
         @if (menuOpen()) {
-          <span>Mis Documentos</span>
+          <span class="text-base whitespace-nowrap">Mis Documentos</span>
         }
       </a>
       
@@ -39,10 +63,11 @@
         routerLink="/dashboard/perfil" 
         routerLinkActive="bg-yellow-400 text-black"
         [routerLinkActiveOptions]="{exact: false}"
-        class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors text-white">
-        <span class="text-xl">👤</span>
+        (click)="isDesktop() ? null : toggleMenu()"
+        class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-gray-800 transition-colors text-white font-medium">
+        <span class="text-xl flex-shrink-0">👤</span>
         @if (menuOpen()) {
-          <span>Mi Perfil</span>
+          <span class="text-base whitespace-nowrap">Mi Perfil</span>
         }
       </a>
       
@@ -53,10 +78,11 @@
           routerLink="/dashboard/usuarios" 
           routerLinkActive="bg-yellow-400 text-black"
           [routerLinkActiveOptions]="{exact: false}"
-          class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors text-white">
-          <span class="text-xl">👥</span>
+          (click)="isDesktop() ? null : toggleMenu()"
+          class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-gray-800 transition-colors text-white font-medium">
+          <span class="text-xl flex-shrink-0">👥</span>
           @if (menuOpen()) {
-            <span>Usuarios</span>
+            <span class="text-base whitespace-nowrap">Usuarios</span>
           }
         </a>
         
@@ -65,10 +91,11 @@
           routerLink="/dashboard/docs-admin" 
           routerLinkActive="bg-yellow-400 text-black"
           [routerLinkActiveOptions]="{exact: false}"
-          class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors text-white">
-          <span class="text-xl">📋</span>
+          (click)="isDesktop() ? null : toggleMenu()"
+          class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-gray-800 transition-colors text-white font-medium">
+          <span class="text-xl flex-shrink-0">📋</span>
           @if (menuOpen()) {
-            <span>Admin Documentos</span>
+            <span class="text-base whitespace-nowrap">Admin Documentos</span>
           }
         </a>
       }
@@ -76,34 +103,50 @@
   </aside>
 
   <!-- Main content -->
-  <main class="flex-1 flex flex-col">
+  <main class="flex-1 flex flex-col min-w-0">
     <!-- Header -->
-    <header class="flex items-center justify-between p-4 border-b border-white/10 bg-gray-900">
-      <div class="text-white/80">
-        @if (user()) {
-          <span>Bienvenido, <strong class="text-white">{{ user()!.nombre }}</strong></span>
-        } @else {
-          <span>Cargando...</span>
-        }
-      </div>
-      
-      <div class="flex items-center gap-3">
-        @if (user()) {
-          <span class="text-xs px-2 py-1 rounded bg-yellow-400/20 text-yellow-400">
-            {{ role() === 'ADMIN_ROLE' ? 'Admin' : 'Usuario' }}
-          </span>
-        }
-        
+    <header class="flex items-center justify-between gap-3 p-4 border-b border-white/10 bg-gray-900">
+      <!-- Botón de menú para móvil -->
+      @if (!isDesktop()) {
         <button 
-          class="px-4 py-2 rounded-lg bg-yellow-400 text-black font-medium hover:bg-yellow-300 transition-colors" 
-          (click)="logout()">
-          Salir
+          (click)="toggleMenu()"
+          class="text-white hover:text-yellow-400 transition-colors p-2 lg:hidden">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
         </button>
+      }
+      
+      <!-- Info del usuario -->
+      <div class="flex-1 flex items-center justify-between gap-3 min-w-0">
+        <div class="text-white/80 min-w-0 hidden sm:block">
+          @if (user()) {
+            <span class="text-sm">
+              Bienvenido, <strong class="text-white truncate">{{ user()!.nombre }}</strong>
+            </span>
+          } @else {
+            <span class="text-sm">Cargando...</span>
+          }
+        </div>
+        
+        <div class="flex items-center gap-2 ml-auto">
+          @if (user()) {
+            <span class="text-xs px-2 py-1 rounded bg-yellow-400/20 text-yellow-400 whitespace-nowrap">
+              {{ role() === 'ADMIN_ROLE' ? 'Admin' : 'Usuario' }}
+            </span>
+          }
+          
+          <button 
+            class="px-3 py-2 rounded-lg bg-yellow-400 text-black font-medium hover:bg-yellow-300 transition-colors text-sm whitespace-nowrap" 
+            (click)="logout()">
+            Salir
+          </button>
+        </div>
       </div>
     </header>
     
     <!-- Content -->
-    <section class="flex-1 p-6 overflow-auto">
+    <section class="flex-1 p-4 sm:p-6 overflow-auto">
       <router-outlet />
     </section>
   </main>

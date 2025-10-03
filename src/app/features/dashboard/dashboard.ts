@@ -24,7 +24,7 @@ export class Dashboard {
   auth = inject(AuthService);
 
   menuOpen = signal(true);
-  isDesktop = signal(window.innerWidth >= 768); // md breakpoint (768px)
+  isDesktop = signal(window.innerWidth >= 1024); // lg breakpoint (1024px)
 
   user = computed(() => this.auth.user());
   role = computed(() => this.auth.role());
@@ -44,7 +44,7 @@ export class Dashboard {
 
   @HostListener("window:resize")
   onResize() {
-    const isCurrentlyDesktop = window.innerWidth >= 768;
+    const isCurrentlyDesktop = window.innerWidth >= 1024;
     if (this.isDesktop() !== isCurrentlyDesktop) {
       this.isDesktop.set(isCurrentlyDesktop);
       // Ajustar el estado del menú al cambiar entre vistas

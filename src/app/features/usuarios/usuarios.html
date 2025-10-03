@@ -1,127 +1,96 @@
-<div class="space-y-6">
-  <div class="flex items-center justify-between">
-    <h2 class="text-xl font-semibold">Usuarios</h2>
-    <div class="flex items-center gap-2">
-      <button
-        (click)="openCreateModal()"
-        class="px-3 py-1 rounded-lg bg-yellow-400 hover:bg-yellow-300 text-black text-sm font-medium disabled:opacity-50">
-        ＋ Crear Usuario
-      </button>
-      <button
-        (click)="load()"
-        [disabled]="loading()"
-        class="px-3 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm disabled:opacity-50">
-        ↻ Recargar
-      </button>
-    </div>
+<div class="space-y-6 p-4 sm:p-0">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <h2 class="text-xl sm:text-2xl font-semibold">Usuarios</h2>
+    <button 
+      (click)="load()"
+      [disabled]="loading()"
+      class="w-full sm:w-auto px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm disabled:opacity-50">
+      ↻ Recargar
+    </button>
   </div>
 
   <!-- Barra de búsqueda -->
-  <div class="flex flex-col sm:flex-row gap-3">
-    <input
+  <div class="flex flex-col sm:flex-row gap-2">
+    <input 
       [value]="q()"
       (input)="q.set($any($event.target).value)"
       (keyup.enter)="onSearch()"
       placeholder="Buscar por nombre o email..."
-      class="w-full sm:flex-1 px-3 py-2 rounded-lg bg-gray-900 border border-white/10 outline-none focus:border-yellow-400 transition-colors">
-
-    <!-- Filtro por Rol -->
-    <select
-      [ngModel]="role()"
-      (ngModelChange)="role.set($event); onSearch()"
-      class="w-full sm:w-auto px-3 py-2 rounded-lg bg-gray-900 border border-white/10 outline-none focus:border-yellow-400 transition-colors text-white/80">
-      <option value="">Todos los roles</option>
-      <option value="ADMIN_ROLE">Administradores</option>
-      <option value="USER_ROLE">Usuarios</option>
-    </select>
-
-    <!-- Filtro por Estado -->
-    <select
-      [ngModel]="status()"
-      (ngModelChange)="status.set($event); onSearch()"
-      class="w-full sm:w-auto px-3 py-2 rounded-lg bg-gray-900 border border-white/10 outline-none focus:border-yellow-400 transition-colors text-white/80">
-      <option value="">Todos los estados</option>
-      <option value="true">Activos</option>
-      <option value="false">Inactivos</option>
-    </select>
-
-    <!-- Botón para limpiar filtros -->
-    <button
-      (click)="clearFilters()"
-      class="w-full sm:w-auto px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm disabled:opacity-50 flex-shrink-0"
-    >
-      Limpiar filtros
+      class="flex-1 px-4 py-2.5 rounded-lg bg-gray-900 border border-white/10 outline-none focus:border-yellow-400 transition-colors text-base">
+    <button 
+      (click)="onSearch()"
+      [disabled]="loading()"
+      class="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-yellow-400 text-black font-medium hover:bg-yellow-300 disabled:opacity-50 transition-colors">
+      Buscar
     </button>
   </div>
 
-  <!-- Información de resultados -->
-  @if (!loading() && !error()) {
-    <div class="text-sm text-white/60">
-      Mostrando {{ usuarios().length }} de {{ totalItems() }} usuarios totales
-    </div>
-  }
-
-  <div class="grid md:grid-cols-2 gap-4">
+  <!-- Layout: En móvil una sola columna, en desktop dos columnas -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    
     <!-- Lista de usuarios -->
     <div class="rounded-xl border border-white/10 bg-gray-900 p-4">
       <h3 class="font-medium mb-3">Lista de Usuarios</h3>
-
+      
       @if (loading()) {
         <div class="flex items-center justify-center py-8">
           <div class="animate-pulse text-white/60">Cargando usuarios...</div>
         </div>
       } @else if (error()) {
         <div class="p-4 rounded-lg border border-red-500/20 bg-red-500/10 text-red-300">
-          <p class="font-semibold mb-1">Error al cargar usuarios</p>
-          <p class="text-sm">{{ error().message || 'Error desconocido' }}</p>
-          <button
+          <p class="font-semibold mb-1 text-sm sm:text-base">Error al cargar usuarios</p>
+          <p class="text-xs sm:text-sm">{{ error().message || 'Error desconocido' }}</p>
+          <button 
             (click)="load()"
-            class="mt-2 px-3 py-1 rounded bg-red-500 text-white text-sm hover:bg-red-600">
+            class="mt-2 w-full px-3 py-1.5 rounded bg-red-500 text-white text-sm hover:bg-red-600">
             Reintentar
           </button>
         </div>
       } @else if (usuarios().length === 0) {
         <div class="py-8 text-center text-white/50">
-          <p>No se encontraron usuarios</p>
+          <p class="text-sm">No se encontraron usuarios</p>
           @if (q()) {
-            <button
-              (click)="q.set('')"
+            <button 
+              (click)="q.set(''); load()"
               class="mt-2 text-yellow-400 hover:text-yellow-300 text-sm">
               Limpiar búsqueda
             </button>
           }
         </div>
       } @else {
-        <ul class="divide-y divide-white/5">
+        <ul class="divide-y divide-white/5 max-h-[60vh] overflow-y-auto">
           @for (u of usuarios(); track u.uid) {
-            <li
-              class="py-3 flex items-center justify-between hover:bg-white/5 px-2 rounded transition-colors"
-              [class.bg-yellow-400/10]="selected()?.uid === u.uid"
-            >
-              <div class="text-white/80 flex-1">
-                <div class="flex items-center gap-2">
-                  <div class="font-semibold">{{ u.nombre }}</div>
-                  @if (u.estado === false) {
-                    <span class="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400">Inactivo</span>
-                  }
+            <li class="py-3 hover:bg-white/5 px-2 rounded transition-colors">
+              <!-- Layout responsivo: columna en móvil, fila en desktop -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <div class="font-semibold text-white truncate">{{ u.nombre }}</div>
+                    @if (u.estado === false) {
+                      <span class="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400 flex-shrink-0">Inactivo</span>
+                    }
+                  </div>
+                  <div class="text-xs text-white/50 truncate">{{ u.email }}</div>
+                  <div class="text-xs text-yellow-400 mt-1">
+                    {{ u.role === 'ADMIN_ROLE' ? 'Administrador' : 'Usuario' }}
+                  </div>
                 </div>
-                <div class="text-xs text-white/50">{{ u.email }}</div>
-                <div class="text-xs text-yellow-400 mt-1">
-                  {{ u.role === 'ADMIN_ROLE' ? 'Administrador' : 'Usuario' }}
+                
+                <!-- Botones: Stack en móvil, fila en tablet+ -->
+                <div class="flex flex-col xs:flex-row gap-2 w-full sm:w-auto">
+                  <button 
+                    (click)="openEditModal(u)"
+                    class="flex-1 xs:flex-none px-3 py-2 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors text-sm"
+                    title="Editar usuario">
+                    ✏️ <span class="xs:hidden">Editar</span>
+                  </button>
+                  <button 
+                    class="flex-1 xs:flex-none px-4 py-2 bg-yellow-400 text-black rounded-lg font-medium hover:bg-yellow-300 transition-colors text-sm" 
+                    (click)="onPick(u)">
+                    Elegir
+                  </button>
                 </div>
-              </div>
-              <div class="flex gap-2">
-                <button
-                  (click)="openEditModal(u)"
-                  class="px-3 py-2 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors"
-                  title="Editar usuario">
-                  ✏️
-                </button>
-                <button
-                  class="px-4 py-2 bg-yellow-400 text-black rounded-lg font-medium hover:bg-yellow-300 transition-colors"
-                  (click)="onPick(u)">
-                  Elegir
-                </button>
               </div>
             </li>
           }
@@ -132,12 +101,13 @@
     <!-- Panel de subida de archivos -->
     <div class="rounded-xl border border-white/10 bg-gray-900 p-4">
       <h3 class="font-medium mb-3">Subir Archivos</h3>
-
+      
       @if (!selected()) {
         <div class="flex items-center justify-center py-12 text-white/50">
-          <div class="text-center">
-            <p class="mb-2">👈 Elige un usuario de la lista</p>
-            <p class="text-sm">Podrás subir archivos para ese usuario</p>
+          <div class="text-center px-4">
+            <p class="mb-2 text-3xl">👈</p>
+            <p class="text-sm sm:text-base">Elige un usuario de la lista</p>
+            <p class="text-xs mt-1">Podrás subir archivos para ese usuario</p>
           </div>
         </div>
       } @else {
@@ -145,70 +115,68 @@
           <!-- Usuario seleccionado -->
           <div class="p-3 rounded-lg bg-yellow-400/10 border border-yellow-400/30">
             <div class="text-xs text-yellow-400 mb-1">Usuario seleccionado:</div>
-            <div class="font-semibold text-white">{{ selected()!.nombre }}</div>
-            <div class="text-sm text-white/60">{{ selected()!.email }}</div>
+            <div class="font-semibold text-white truncate">{{ selected()!.nombre }}</div>
+            <div class="text-sm text-white/60 truncate">{{ selected()!.email }}</div>
           </div>
 
           <!-- Selector de archivos -->
           <div>
-            <input
-              type="file"
-              multiple
+            <input 
+              type="file" 
+              multiple 
               (change)="onFileChange($event)"
               accept=".pdf,.xml,.zip,.rar"
               [disabled]="uploading()"
-              class="block w-full text-sm text-white/80
-                     file:mr-3 file:py-2 file:px-4 file:rounded-lg
-                     file:border-0 file:bg-yellow-400 file:text-black
-                     file:font-medium hover:file:bg-yellow-300
+              class="block w-full text-sm text-white/80 
+                     file:mr-3 file:py-2 file:px-4 file:rounded-lg 
+                     file:border-0 file:bg-yellow-400 file:text-black 
+                     file:font-medium hover:file:bg-yellow-300 
                      file:cursor-pointer cursor-pointer
                      disabled:opacity-50 disabled:cursor-not-allowed">
             <div class="text-xs text-white/50 mt-2">
-              📄 Formatos: PDF, XML, ZIP | 📦 Máximo: 50 MB por archivo
+              📄 PDF, XML, ZIP, RAR | 📦 Máx: 50 MB
             </div>
           </div>
 
           <!-- Lista de archivos con barras de progreso -->
           @if (files().length > 0) {
-            <div class="space-y-3">
-              <div class="text-sm text-white/70 font-medium">
-                Archivos seleccionados ({{ files().length }}):
+            <div class="space-y-3 max-h-[40vh] overflow-y-auto pr-1">
+              <div class="text-sm text-white/70 font-medium sticky top-0 bg-gray-900 py-1">
+                Archivos ({{ files().length }}):
               </div>
-
+              
               @for (file of files(); track file.name) {
                 @let progress = getFileProgress(file.name);
-
+                
                 <div class="p-3 rounded-lg bg-gray-800 border border-white/10">
-                  <!-- Nombre y estado del archivo -->
-                  <div class="flex items-center justify-between mb-2">
-                    <div class="flex items-center gap-2 flex-1 min-w-0">
-                      <!-- Icono de estado -->
+                  <!-- Nombre y estado -->
+                  <div class="flex items-start gap-2 mb-2">
+                    <!-- Icono de estado -->
+                    <div class="flex-shrink-0 mt-0.5">
                       @if (!progress || progress.status === 'waiting') {
-                        <span class="text-lg flex-shrink-0">⏳</span>
+                        <span class="text-lg">⏳</span>
                       } @else if (progress.status === 'uploading') {
-                        <span class="text-lg flex-shrink-0 animate-spin">⌛</span>
+                        <span class="text-lg animate-spin">⌛</span>
                       } @else if (progress.status === 'completed') {
-                        <span class="text-lg flex-shrink-0 text-green-400">✓</span>
+                        <span class="text-lg text-green-400">✓</span>
                       } @else if (progress.status === 'error') {
-                        <span class="text-lg flex-shrink-0 text-red-400">✗</span>
+                        <span class="text-lg text-red-400">✗</span>
                       }
-
-                      <!-- Nombre del archivo -->
-                      <span class="text-sm text-white/90 truncate flex-1">
-                        {{ file.name }}
-                      </span>
-
-                      <!-- Tamaño -->
-                      <span class="text-xs text-white/50 flex-shrink-0">
-                        {{ (file.size / 1024) | number:'1.0-0' }} KB
-                      </span>
                     </div>
-
-                    <!-- Botón eliminar (solo si no está subiendo) -->
+                    
+                    <!-- Info del archivo -->
+                    <div class="flex-1 min-w-0">
+                      <div class="text-sm text-white/90 truncate">{{ file.name }}</div>
+                      <div class="text-xs text-white/50">
+                        {{ (file.size / 1024) | number:'1.0-0' }} KB
+                      </div>
+                    </div>
+                    
+                    <!-- Botón eliminar -->
                     @if (!uploading()) {
-                      <button
+                      <button 
                         (click)="removeFile(file)"
-                        class="ml-2 text-red-400 hover:text-red-300 px-2 flex-shrink-0">
+                        class="flex-shrink-0 text-red-400 hover:text-red-300 px-2 py-1">
                         ✕
                       </button>
                     }
@@ -217,15 +185,15 @@
                   <!-- Barra de progreso -->
                   @if (progress && (progress.status === 'uploading' || progress.status === 'completed')) {
                     <div class="relative w-full h-2 bg-gray-700 rounded-full overflow-hidden">
-                      <div
+                      <div 
                         class="absolute inset-y-0 left-0 rounded-full transition-all duration-300"
                         [class.bg-yellow-400]="progress.status === 'uploading'"
                         [class.bg-green-400]="progress.status === 'completed'"
                         [style.width.%]="progress.progress">
                       </div>
                     </div>
-
-                    <!-- Porcentaje -->
+                    
+                    <!-- Estado y porcentaje -->
                     <div class="flex items-center justify-between mt-1">
                       <span class="text-xs text-white/60">
                         @if (progress.status === 'uploading') {
@@ -259,16 +227,16 @@
           }
 
           <!-- Botón de subida -->
-          <button
+          <button 
             [disabled]="uploading() || files().length === 0"
             (click)="upload()"
-            class="w-full px-4 py-3 rounded-lg bg-yellow-400 text-black font-semibold
-                   hover:bg-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed
-                   transition-colors">
+            class="w-full px-4 py-3 rounded-lg bg-yellow-400 text-black font-semibold 
+                   hover:bg-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed 
+                   transition-colors text-sm sm:text-base">
             @if (uploading()) {
               <span class="flex items-center justify-center gap-2">
                 <span class="animate-spin inline-block w-4 h-4 border-2 border-black border-t-transparent rounded-full"></span>
-                Subiendo archivos...
+                Subiendo...
               </span>
             } @else {
               <span>↑ Subir {{ files().length }} archivo(s)</span>
@@ -277,7 +245,7 @@
 
           <!-- Mensaje de resultado -->
           @if (resultMsg()) {
-            <div class="p-3 rounded-lg text-sm"
+            <div class="p-3 rounded-lg text-xs sm:text-sm"
                  [class.bg-green-500/10]="resultMsg().startsWith('✓')"
                  [class.border-green-500/30]="resultMsg().startsWith('✓')"
                  [class.text-green-300]="resultMsg().startsWith('✓')"
@@ -296,54 +264,35 @@
     </div>
   </div>
 
-  <!-- Controles de Paginación -->
-  @if (totalItems() > 10) {
-    <div class="flex flex-col md:flex-row items-center justify-between gap-4 p-4 rounded-xl border border-white/10 bg-gray-900">
-      <button
-        (click)="prevPage()"
-        [disabled]="page() === 1"
-        class="w-full md:w-auto px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-        ← Anterior
-      </button>
-
-      <div class="flex items-center gap-4">
-        <!-- Selector de tamaño de página -->
-        <div class="flex items-center gap-2">
-          <select
-            [value]="pageSize()"
-            (change)="onPageSizeChange($any($event.target).value)"
-            class="px-2 py-1 rounded-lg bg-gray-800 border-none text-white/80 text-sm outline-none focus:ring-2 focus:ring-yellow-400"
-          >
-            <option value="10">10 / página</option>
-            <option value="25">25 / página</option>
-            <option value="50">50 / página</option>
-          </select>
-        </div>
-
-        <!-- Indicador de página actual -->
-        <div class="flex items-center gap-2">
-          <span class="text-sm text-white/60">Página</span>
-          <span class="px-3 py-1 rounded-lg bg-yellow-400 text-black font-semibold">
-            {{ page() }}
-          </span>
-          <span class="text-sm text-white/60">de {{ totalPages() }}</span>
-        </div>
+  <!-- Paginación (solo si hay más de una página) -->
+  @if (totalPages() > 1) {
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl border border-white/10 bg-gray-900">
+      <!-- Info de página -->
+      <div class="text-sm text-white/60">
+        Página {{ page() }} de {{ totalPages() }} ({{ totalItems() }} total)
       </div>
-
-      <button
-        (click)="nextPage()"
-        [disabled]="page() === totalPages()"
-        class="w-full md:w-auto px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-        Siguiente →
-      </button>
+      
+      <!-- Botones de navegación -->
+      <div class="flex items-center gap-2">
+        <button 
+          (click)="prevPage()"
+          [disabled]="page() === 1"
+          class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm">
+          ← Anterior
+        </button>
+        <button 
+          (click)="nextPage()"
+          [disabled]="page() === totalPages()"
+          class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm">
+          Siguiente →
+        </button>
+      </div>
     </div>
   }
 </div>
 
 <!-- Modal de edición de usuario -->
-<app-edit-user-modal
+<app-edit-user-modal 
   #editModal
-  (userUpdated)="onUserUpdate($event)"
-  (userCreated)="onUserCreate($event)"
->
+  (userUpdated)="onUserUpdate($event)">
 </app-edit-user-modal>
