@@ -5,8 +5,7 @@ import type { User, Role } from '../../shared/types';
 import { UsuariosApi } from '../../services/usuarios';
 import { UploadsApi, type FileUploadProgress } from '../../services/uploads';
 import { createResourceState } from '../../core/http-resource';
-import { EditUserModalComponent } from '../../shared/edit-user-modal.component';
-import { forkJoin } from 'rxjs';
+import { EditUserModalComponent } from '../../shared/edit-user-modal.component';import { forkJoin, tap } from 'rxjs';
 
 // Helper para normalizar texto (quitar tildes y a minúsculas)
 function normalizeText(text: string): string {
@@ -235,40 +234,28 @@ export class UsuariosPage {
     });
     this.fileProgress.set(progressMap);
 
-    // Subir cada archivo individualmente para rastrear el progreso
-    const uploads$ = files.map(file =>
-      this.uploadApi.uploadSingleFile(user.uid, file)
+    // Preparamos los observables de subida, usando `tap` para actualizar el progreso
+    // sin necesidad de una suscripción separada.
+    const uploadsWithProgress$ = files.map((file, index) =>
+      this.uploadApi.uploadSingleFile(user.uid, file).pipe(
+        tap({
+          next: (progress) => {
+            const current = new Map(this.fileProgress());
+            current.set(progress.file.name, progress);
+            this.fileProgress.set(current);
+          },
+          error: (e) => {
+            const current = new Map(this.fileProgress());
+            current.set(file.name, { file, progress: 0, status: 'error', error: e?.error?.msg || 'Error al subir' });
+            this.fileProgress.set(current);
+          }
+        })
+      )
     );
 
-    // Suscribirse a cada upload para actualizar el progreso
-    uploads$.forEach((upload$, index) => {
-      upload$.subscribe({
-        next: (progress) => {
-          // Actualizar el progreso de este archivo específico
-          const current = new Map(this.fileProgress());
-          current.set(progress.file.name, progress);
-          this.fileProgress.set(current);
-        },
-        error: (e) => {
-          // Marcar este archivo como error
-          const current = new Map(this.fileProgress());
-          const fileName = files[index].name;
-          current.set(fileName, {
-            file: files[index],
-            progress: 0,
-            status: 'error',
-            error: e?.error?.msg || 'Error al subir'
-          });
-          this.fileProgress.set(current);
-        }
-      });
-    });
-
-    // Esperar a que todos terminen
-    forkJoin(uploads$.map(upload$ =>
-      upload$.pipe()
-    )).subscribe({
-      next: () => {
+    // forkJoin se suscribe UNA SOLA VEZ a todos los observables
+    forkJoin(uploadsWithProgress$).subscribe({
+      next: (results) => {
         this.uploading.set(false);
 
         // Verificar si todos se subieron correctamente
@@ -295,7 +282,7 @@ export class UsuariosPage {
       },
       error: (e) => {
         this.uploading.set(false);
-        this.resultMsg.set(`✗ ${e?.error?.msg || 'Error al subir archivos'}`);
+        this.resultMsg.set(`✗ Error general al procesar las subidas.`);
       }
     });
   }
