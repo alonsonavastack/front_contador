@@ -80,6 +80,31 @@ export class AuthService {
     });
   }
 
+  // Métodos para recuperación de contraseña
+  requestPasswordRecovery(email: string) {
+    return this.http.post<any>(`${environment.api}/login/request-recovery`, {
+      email
+    });
+  }
+
+  verifyRecoveryOtp(email: string, code: string) {
+    // Corregido: la URL correcta es 'verify-recovery-otp'
+    return this.http.post<any>(`${environment.api}/login/verify-recovery-otp`, {
+      email,
+      code
+    });
+  }
+
+  resetPassword(tempToken: string, userId: string, newPassword: string) {
+    // Corregido: El backend espera el token en los headers, no en el body.
+    const headers = { 'x-token': tempToken };
+    return this.http.post<any>(
+      `${environment.api}/login/reset-password`,
+      { newPassword }, // Solo la nueva contraseña en el body
+      { headers }
+    );
+  }
+
   setSession(res: any) {
     console.log('Guardando sesión:', res);
 
@@ -117,6 +142,9 @@ export class AuthService {
 
   // Método para refrescar el usuario (opcional)
   refreshUser() {
-    return this.http.get<{ ok: boolean; user: User }>(`${environment.api}/api/auth/me`);
+    // Corregido: Apuntar al endpoint correcto para renovar token y datos de usuario.
+    // El backend devuelve { ok, token, usuario, menu }
+    return this.http.get<AuthResponse>(`${environment.api}/login/renew`);
+        // return this.http.get<{ ok: boolean; user: User }>(`${environment.api}/api/auth/me`);
   }
 }

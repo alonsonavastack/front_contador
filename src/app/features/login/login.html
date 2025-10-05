@@ -28,9 +28,15 @@
       </div>
 
       <div>
-        <label class="block text-xs sm:text-sm font-medium text-white/70 mb-2">
-          Contraseña
-        </label>
+        <div class="flex items-center justify-between mb-2">
+          <label class="block text-xs sm:text-sm font-medium text-white/70">
+            Contraseña
+          </label>
+          <a routerLink="/forgot-password" 
+             class="text-xs text-yellow-400 hover:text-yellow-300 transition-colors">
+            ¿Olvidaste tu contraseña?
+          </a>
+        </div>
         <input 
           [value]="password()"
           (input)="onPasswordChange($event)"
