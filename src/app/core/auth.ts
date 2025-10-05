@@ -64,12 +64,19 @@ export class AuthService {
     });
   }
 
-  register(nombre: string, email: string, password: string) {
-    // Asumimos que el rol por defecto es 'USER_ROLE'
-    return this.http.post<AuthResponse>(`${environment.api}/login/register`, {
+  register(nombre: string, email: string, password: string, telefono: string) {
+    return this.http.post<any>(`${environment.api}/login/register`, {
       nombre,
       email,
       password,
+      telefono
+    });
+  }
+
+  verifyOtp(email: string, code: string) {
+    return this.http.post<any>(`${environment.api}/login/verify-otp`, {
+      email,
+      code
     });
   }
 
